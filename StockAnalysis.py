@@ -64,17 +64,31 @@ class StockAnalyzer:
         try:
             print(f"\n📊 Fetching data for {self.symbol}...")
             self.stock = yf.Ticker(self.symbol)
+
+            print(f"📥 Downloading history for period={period}...")
             self.data = self.stock.history(period=period)
+
+            print(f"📋 Fetching company info...")
             self.info = self.stock.info
 
-            if len(self.data) < 60:
-                print(f"⚠️ Insufficient data for {self.symbol}")
+            print(f"✅ Data length: {len(self.data)}")
+            print(f"✅ Info keys: {len(self.info.keys()) if self.info else 0}")
+
+            if len(self.data) == 0:
+                print(f"⚠️ No historical data returned for {self.symbol}")
+                print(f"⚠️ This might be due to network issues or Yahoo Finance blocking")
+                return False
+
+            if len(self.data) < 60 and period == '1y':
+                print(f"⚠️ Insufficient data for {self.symbol}: only {len(self.data)} days")
                 return False
 
             print(f"✅ Successfully fetched {len(self.data)} days of data")
             return True
         except Exception as e:
             print(f"❌ Error fetching {self.symbol}: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
     def analyze_fundamentals(self):
