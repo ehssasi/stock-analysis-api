@@ -7,6 +7,7 @@ Flask API to expose stock analysis functionality for mobile app
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from StockAnalysis import StockAnalyzer
+from cache_helper import get_cached_data, set_cached_data
 import json
 from datetime import datetime
 import traceback
@@ -221,8 +222,19 @@ def get_chart_data(symbol):
 
 @app.route('/api/quick-quote/<symbol>', methods=['GET'])
 def quick_quote(symbol):
-    """Get quick quote without full analysis"""
+    """Get quick quote without full analysis (with 15-min caching)"""
     try:
+        cache_key = f"quick_quote_{symbol.upper()}"
+
+        # Try to get cached data first
+        cached = get_cached_data(cache_key)
+        if cached:
+            print(f"📦 Returning cached quote for {symbol}")
+            cached['cached'] = True
+            return jsonify(cached)
+
+        # Fetch fresh data
+        print(f"🔄 Fetching fresh quote for {symbol}")
         analyzer = StockAnalyzer(symbol.upper())
 
         if not analyzer.fetch_stock_data(period='5d'):
@@ -236,14 +248,20 @@ def quick_quote(symbol):
         change = current_price - prev_close
         change_pct = (change / prev_close) * 100
 
-        return jsonify({
+        result = {
             'symbol': symbol.upper(),
             'company_name': analyzer.info.get('longName', symbol),
             'current_price': float(current_price),
             'change': float(change),
             'change_pct': float(change_pct),
-            'timestamp': datetime.now().isoformat()
-        })
+            'timestamp': datetime.now().isoformat(),
+            'cached': False
+        }
+
+        # Cache the result
+        set_cached_data(cache_key, result)
+
+        return jsonify(result)
 
     except Exception as e:
         print(f"❌ Error getting quote for {symbol}: {str(e)}")
