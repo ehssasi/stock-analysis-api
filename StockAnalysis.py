@@ -62,8 +62,23 @@ try:
     yf.Ticker.__init__ = _patched_ticker_init
 
 except ImportError:
-    # If curl_cffi is not available, use regular yfinance
+    # If curl_cffi is not available, use regular yfinance with requests session
     import yfinance as yf
+    import requests
+
+    # Create a session with proper headers to avoid being blocked
+    session = requests.Session()
+    session.headers.update({
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    })
+
+    # Use the session for all yfinance requests
+    _original_ticker_init = yf.Ticker.__init__
+
+    def _patched_ticker_init(self, ticker, session=session, **kwargs):
+        _original_ticker_init(self, ticker, session=session, **kwargs)
+
+    yf.Ticker.__init__ = _patched_ticker_init
 
 # For PDF generation
 try:
