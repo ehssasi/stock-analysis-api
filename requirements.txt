@@ -7,7 +7,6 @@ pandas==2.2.3
 numpy==2.0.2
 scikit-learn==1.5.2
 requests==2.31.0
-curl-cffi==0.7.3
 
 # Optional for PDF generation
 # pdfkit==1.0.0
