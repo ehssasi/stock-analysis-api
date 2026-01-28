@@ -26,59 +26,8 @@ except ImportError:
     PLOTLY_AVAILABLE = False
     print("Warning: plotly not available. Install with: pip install plotly")
 
-# Disable SSL verification by setting environment variables
-os.environ['CURL_CA_BUNDLE'] = ''
-os.environ['REQUESTS_CA_BUNDLE'] = ''
-os.environ['SSL_CERT_FILE'] = ''
-
-# Configure curl_cffi to bypass SSL verification
-try:
-    from curl_cffi import requests as curl_requests
-
-    # Create a custom session class that disables SSL verification for all requests
-    class NoSSLVerifySession(curl_requests.Session):
-        def request(self, method, url, **kwargs):
-            # Force verify=False for all requests
-            kwargs['verify'] = False
-            # Add browser impersonation
-            if 'impersonate' not in kwargs:
-                kwargs['impersonate'] = 'chrome110'
-            return super().request(method, url, **kwargs)
-
-    # Create a global session instance with browser impersonation
-    _global_session = NoSSLVerifySession(impersonate='chrome110')
-
-    # Import yfinance after configuring curl_cffi
-    import yfinance as yf
-
-    # Patch the Ticker class to use our session
-    _original_ticker_init = yf.Ticker.__init__
-
-    def _patched_ticker_init(self, ticker, session=None, **kwargs):
-        if session is None:
-            session = _global_session
-        _original_ticker_init(self, ticker, session=session, **kwargs)
-
-    yf.Ticker.__init__ = _patched_ticker_init
-
-except ImportError:
-    # If curl_cffi is not available, use regular yfinance with requests session
-    import yfinance as yf
-    import requests
-
-    # Create a session with proper headers to avoid being blocked
-    session = requests.Session()
-    session.headers.update({
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-    })
-
-    # Use the session for all yfinance requests
-    _original_ticker_init = yf.Ticker.__init__
-
-    def _patched_ticker_init(self, ticker, session=session, **kwargs):
-        _original_ticker_init(self, ticker, session=session, **kwargs)
-
-    yf.Ticker.__init__ = _patched_ticker_init
+# Import yfinance
+import yfinance as yf
 
 # For PDF generation
 try:
