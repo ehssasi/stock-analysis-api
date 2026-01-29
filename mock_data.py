@@ -176,16 +176,17 @@ def get_mock_analysis(symbol):
             'macd': random.uniform(-2, 2),
             'macd_signal': random.uniform(-2, 2),
             'moving_averages': {
-                'sma_20': base_price * 0.98,
-                'sma_50': base_price * 0.95,
-                'sma_200': base_price * 0.90,
-                'ema_12': base_price * 0.99,
-                'ema_26': base_price * 0.97
+                'SMA_20': base_price * 0.98,
+                'SMA_50': base_price * 0.95,
+                'SMA_200': base_price * 0.90,
+                'EMA_12': base_price * 0.99,
+                'EMA_26': base_price * 0.97
             },
             'bollinger': {
                 'upper': base_price * 1.05,
                 'middle': base_price,
-                'lower': base_price * 0.95
+                'lower': base_price * 0.95,
+                'position': random.uniform(40, 60)  # Percentage position in bollinger bands
             },
             'signal_reasons': ['Positive momentum', 'Strong fundamentals', 'Above moving averages']
         },
@@ -223,7 +224,12 @@ def get_mock_analysis(symbol):
 
         # Candlestick Patterns
         'candlestick_patterns': [
-            {'pattern': 'Bullish Engulfing', 'signal': 'BUY', 'strength': 'Strong'}
+            {
+                'pattern': 'Bullish Engulfing',
+                'signal': 'Bullish',
+                'strength': 'Strong',
+                'description': 'Strong bullish reversal pattern indicating potential upward momentum'
+            }
         ],
 
         # Day Trading
@@ -249,7 +255,9 @@ def get_mock_analysis(symbol):
         'short_term_forecast': [
             {
                 'date': (datetime.now() + timedelta(days=i)).isoformat(),
-                'predicted_price': base_price * (1 + random.uniform(-0.02, 0.03)),
+                'day_name': (datetime.now() + timedelta(days=i)).strftime('%A'),
+                'predicted_price': base_price * (1 + (pct := random.uniform(-0.02, 0.03))),
+                'change_from_current': pct * 100,
                 'confidence': random.uniform(70, 90)
             }
             for i in range(1, 6)
@@ -257,9 +265,16 @@ def get_mock_analysis(symbol):
 
         # Long-term Projection
         'long_term_projection': {
-            'bull_case': base_price * 1.30,
-            'base_case': base_price * 1.15,
-            'bear_case': base_price * 0.90,
+            'projections': {
+                '12_months': {
+                    'bullish': base_price * 1.30,
+                    'base': base_price * 1.15,
+                    'bearish': base_price * 0.90
+                }
+            },
+            'analyst_targets': {
+                'upside_potential': ((base_price * 1.15) - base_price) / base_price * 100
+            },
             'timeframe': '12 months',
             'probability_bull': 30,
             'probability_base': 50,
@@ -269,8 +284,9 @@ def get_mock_analysis(symbol):
         # Sector Forecast
         'sector_forecast': {
             'sector': stock.get('sector', 'Technology'),
-            'outlook': 'Positive',
-            'growth_potential': 'High',
+            'sector_outlook': 'Positive outlook with strong growth drivers',
+            'growth_potential': random.uniform(10, 25),  # Percentage
+            'risk_level': 'Medium',
             'expected_growth_rate': random.uniform(10, 25),
             'key_drivers': ['AI adoption', 'Digital transformation', 'Cloud computing']
         },
