@@ -8,9 +8,18 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from StockAnalysis import StockAnalyzer
 from cache_helper import get_cached_data, set_cached_data
+from mock_data import get_mock_quote, get_mock_analysis, get_mock_chart_data
+import alpha_vantage_data as av
+from alpha_analysis import analyze_stock_alpha, get_chart_data_alpha
 import json
 from datetime import datetime
 import traceback
+
+# Data source selection
+# 'mock' = Demo data for testing
+# 'alpha_vantage' = Real data from Alpha Vantage (25 calls/day free)
+# 'yahoo' = Yahoo Finance (currently blocked on corporate networks)
+DATA_SOURCE = 'alpha_vantage'
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for mobile app requests
@@ -28,6 +37,24 @@ def health_check():
 def analyze_stock(symbol):
     """Analyze a stock and return comprehensive data"""
     try:
+        # Use mock data
+        if DATA_SOURCE == 'mock':
+            print(f"🎭 Returning mock analysis for {symbol}")
+            return jsonify(get_mock_analysis(symbol))
+
+        # Use Alpha Vantage
+        if DATA_SOURCE == 'alpha_vantage':
+            print(f"📊 Analyzing {symbol} with Alpha Vantage...")
+            analysis = analyze_stock_alpha(symbol)
+
+            if analysis:
+                return jsonify(analysis)
+            else:
+                return jsonify({
+                    'error': 'Analysis failed',
+                    'message': f'Could not fetch data for {symbol} from Alpha Vantage'
+                }), 400
+
         print(f"📊 Analyzing {symbol}...")
 
         # Initialize analyzer
@@ -185,6 +212,24 @@ def get_chart_data(symbol):
     try:
         period = request.args.get('period', '90d')  # Default 90 days
 
+        # Use mock data
+        if DATA_SOURCE == 'mock':
+            print(f"🎭 Returning mock chart data for {symbol}")
+            return jsonify(get_mock_chart_data(symbol, period))
+
+        # Use Alpha Vantage
+        if DATA_SOURCE == 'alpha_vantage':
+            print(f"📈 Fetching chart data from Alpha Vantage for {symbol}")
+            chart_data = get_chart_data_alpha(symbol, period)
+
+            if chart_data:
+                return jsonify(chart_data)
+            else:
+                return jsonify({
+                    'error': 'Failed to fetch data',
+                    'message': f'Could not fetch chart data for {symbol} from Alpha Vantage'
+                }), 400
+
         analyzer = StockAnalyzer(symbol.upper())
 
         if not analyzer.fetch_stock_data(period=period):
@@ -224,6 +269,25 @@ def get_chart_data(symbol):
 def quick_quote(symbol):
     """Get quick quote without full analysis (with 15-min caching)"""
     try:
+        # Use mock data
+        if DATA_SOURCE == 'mock':
+            print(f"🎭 Returning mock quote for {symbol}")
+            return jsonify(get_mock_quote(symbol))
+
+        # Use Alpha Vantage
+        if DATA_SOURCE == 'alpha_vantage':
+            print(f"📊 Fetching real quote from Alpha Vantage for {symbol}")
+            av.rate_limit()  # Respect rate limits
+            quote = av.get_quote(symbol)
+
+            if quote:
+                return jsonify(quote)
+            else:
+                return jsonify({
+                    'error': 'Failed to fetch data',
+                    'message': f'Could not fetch data for {symbol} from Alpha Vantage'
+                }), 400
+
         cache_key = f"quick_quote_{symbol.upper()}"
 
         # Try to get cached data first
@@ -233,24 +297,30 @@ def quick_quote(symbol):
             cached['cached'] = True
             return jsonify(cached)
 
-        # Fetch fresh data
+        # Fetch fresh data - use lightweight approach to avoid rate limiting
         print(f"🔄 Fetching fresh quote for {symbol}")
-        analyzer = StockAnalyzer(symbol.upper())
+        import yfinance as yf
+        from StockAnalysis import yf_session
 
-        if not analyzer.fetch_stock_data(period='5d'):
+        ticker = yf.Ticker(symbol.upper(), session=yf_session)
+
+        # Get only price history (avoids the .info API call that causes 429)
+        data = ticker.history(period='5d')
+
+        if len(data) == 0:
             return jsonify({
                 'error': 'Failed to fetch data',
                 'message': f'Could not fetch data for {symbol}'
             }), 400
 
-        current_price = analyzer.data['Close'].iloc[-1]
-        prev_close = analyzer.data['Close'].iloc[-2]
+        current_price = data['Close'].iloc[-1]
+        prev_close = data['Close'].iloc[-2] if len(data) > 1 else current_price
         change = current_price - prev_close
-        change_pct = (change / prev_close) * 100
+        change_pct = (change / prev_close) * 100 if prev_close != 0 else 0
 
         result = {
             'symbol': symbol.upper(),
-            'company_name': analyzer.info.get('longName', symbol),
+            'company_name': symbol.upper(),  # Skip company name to avoid API calls
             'current_price': float(current_price),
             'change': float(change),
             'change_pct': float(change_pct),
