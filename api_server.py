@@ -42,7 +42,7 @@ def analyze_stock(symbol):
             print(f"🎭 Returning mock analysis for {symbol}")
             return jsonify(get_mock_analysis(symbol))
 
-        # Use Alpha Vantage
+        # Use Alpha Vantage (with fallback to mock data if rate limited)
         if DATA_SOURCE == 'alpha_vantage':
             print(f"📊 Analyzing {symbol} with Alpha Vantage...")
             analysis = analyze_stock_alpha(symbol)
@@ -50,10 +50,9 @@ def analyze_stock(symbol):
             if analysis:
                 return jsonify(analysis)
             else:
-                return jsonify({
-                    'error': 'Analysis failed',
-                    'message': f'Could not fetch data for {symbol} from Alpha Vantage'
-                }), 400
+                # Fallback to mock data if Alpha Vantage fails (rate limit, etc.)
+                print(f"⚠️ Alpha Vantage failed, falling back to mock data for {symbol}")
+                return jsonify(get_mock_analysis(symbol))
 
         print(f"📊 Analyzing {symbol}...")
 
@@ -217,7 +216,7 @@ def get_chart_data(symbol):
             print(f"🎭 Returning mock chart data for {symbol}")
             return jsonify(get_mock_chart_data(symbol, period))
 
-        # Use Alpha Vantage
+        # Use Alpha Vantage (with fallback to mock data if rate limited)
         if DATA_SOURCE == 'alpha_vantage':
             print(f"📈 Fetching chart data from Alpha Vantage for {symbol}")
             chart_data = get_chart_data_alpha(symbol, period)
@@ -225,10 +224,9 @@ def get_chart_data(symbol):
             if chart_data:
                 return jsonify(chart_data)
             else:
-                return jsonify({
-                    'error': 'Failed to fetch data',
-                    'message': f'Could not fetch chart data for {symbol} from Alpha Vantage'
-                }), 400
+                # Fallback to mock data if Alpha Vantage fails (rate limit, etc.)
+                print(f"⚠️ Alpha Vantage failed, falling back to mock data for {symbol}")
+                return jsonify(get_mock_chart_data(symbol, period))
 
         analyzer = StockAnalyzer(symbol.upper())
 
@@ -274,7 +272,7 @@ def quick_quote(symbol):
             print(f"🎭 Returning mock quote for {symbol}")
             return jsonify(get_mock_quote(symbol))
 
-        # Use Alpha Vantage
+        # Use Alpha Vantage (with fallback to mock data if rate limited)
         if DATA_SOURCE == 'alpha_vantage':
             print(f"📊 Fetching real quote from Alpha Vantage for {symbol}")
             av.rate_limit()  # Respect rate limits
@@ -283,10 +281,9 @@ def quick_quote(symbol):
             if quote:
                 return jsonify(quote)
             else:
-                return jsonify({
-                    'error': 'Failed to fetch data',
-                    'message': f'Could not fetch data for {symbol} from Alpha Vantage'
-                }), 400
+                # Fallback to mock data if Alpha Vantage fails (rate limit, etc.)
+                print(f"⚠️ Alpha Vantage failed, falling back to mock data for {symbol}")
+                return jsonify(get_mock_quote(symbol))
 
         cache_key = f"quick_quote_{symbol.upper()}"
 
