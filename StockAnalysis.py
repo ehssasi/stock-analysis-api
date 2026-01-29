@@ -26,8 +26,35 @@ except ImportError:
     PLOTLY_AVAILABLE = False
     print("Warning: plotly not available. Install with: pip install plotly")
 
-# Import yfinance
+# Disable SSL verification for corporate proxy environments
+import os
+os.environ['CURL_CA_BUNDLE'] = ''
+os.environ['REQUESTS_CA_BUNDLE'] = ''
+os.environ['SSL_CERT_FILE'] = ''
+
+# Disable SSL warnings
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# Import yfinance and requests
 import yfinance as yf
+import requests
+import time
+
+# Create a custom session for yfinance with proper headers and SSL disabled
+def create_yf_session():
+    session = requests.Session()
+    session.headers.update({
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Referer': 'https://finance.yahoo.com/'
+    })
+    session.verify = False
+    return session
+
+# Global session for yfinance
+yf_session = create_yf_session()
 
 # For PDF generation
 try:
@@ -63,12 +90,15 @@ class StockAnalyzer:
         """Fetch historical stock data and company info"""
         try:
             print(f"\n📊 Fetching data for {self.symbol}...")
-            self.stock = yf.Ticker(self.symbol)
+            # Use custom session with browser headers
+            self.stock = yf.Ticker(self.symbol, session=yf_session)
 
             print(f"📥 Downloading history for period={period}...")
+            time.sleep(0.5)  # Small delay to avoid rate limiting
             self.data = self.stock.history(period=period)
 
             print(f"📋 Fetching company info...")
+            time.sleep(0.5)  # Small delay before fetching info
             self.info = self.stock.info
 
             print(f"✅ Data length: {len(self.data)}")
