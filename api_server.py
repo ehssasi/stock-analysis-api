@@ -42,7 +42,7 @@ def analyze_stock(symbol):
             print(f"🎭 Returning mock analysis for {symbol}")
             return jsonify(get_mock_analysis(symbol))
 
-        # Use Alpha Vantage (with fallback to mock data if rate limited)
+        # Use Alpha Vantage (no fallback - show upgrade message if rate limited)
         if DATA_SOURCE == 'alpha_vantage':
             print(f"📊 Analyzing {symbol} with Alpha Vantage...")
             analysis = analyze_stock_alpha(symbol)
@@ -50,9 +50,22 @@ def analyze_stock(symbol):
             if analysis:
                 return jsonify(analysis)
             else:
-                # Fallback to mock data if Alpha Vantage fails (rate limit, etc.)
-                print(f"⚠️ Alpha Vantage failed, falling back to mock data for {symbol}")
-                return jsonify(get_mock_analysis(symbol))
+                # Return error message asking user to upgrade
+                print(f"⚠️ Alpha Vantage API limit exceeded for {symbol}")
+                return jsonify({
+                    'error': 'API_LIMIT_EXCEEDED',
+                    'message': 'Free tier API limit exceeded. Please upgrade to premium to access real-time stock data.',
+                    'upgrade_info': {
+                        'title': 'Upgrade to Premium',
+                        'description': 'Get unlimited access to real-time stock analysis with our premium plan.',
+                        'benefits': [
+                            'Unlimited API calls',
+                            'Real-time data updates',
+                            'Advanced technical indicators',
+                            'Priority support'
+                        ]
+                    }
+                }), 429  # 429 Too Many Requests
 
         print(f"📊 Analyzing {symbol}...")
 
@@ -216,7 +229,7 @@ def get_chart_data(symbol):
             print(f"🎭 Returning mock chart data for {symbol}")
             return jsonify(get_mock_chart_data(symbol, period))
 
-        # Use Alpha Vantage (with fallback to mock data if rate limited)
+        # Use Alpha Vantage (no fallback - show upgrade message if rate limited)
         if DATA_SOURCE == 'alpha_vantage':
             print(f"📈 Fetching chart data from Alpha Vantage for {symbol}")
             chart_data = get_chart_data_alpha(symbol, period)
@@ -224,9 +237,16 @@ def get_chart_data(symbol):
             if chart_data:
                 return jsonify(chart_data)
             else:
-                # Fallback to mock data if Alpha Vantage fails (rate limit, etc.)
-                print(f"⚠️ Alpha Vantage failed, falling back to mock data for {symbol}")
-                return jsonify(get_mock_chart_data(symbol, period))
+                # Return error message asking user to upgrade
+                print(f"⚠️ Alpha Vantage API limit exceeded for chart data {symbol}")
+                return jsonify({
+                    'error': 'API_LIMIT_EXCEEDED',
+                    'message': 'Free tier API limit exceeded. Please upgrade to premium to access real-time chart data.',
+                    'upgrade_info': {
+                        'title': 'Upgrade to Premium',
+                        'description': 'Get unlimited access to real-time stock charts with our premium plan.'
+                    }
+                }), 429  # 429 Too Many Requests
 
         analyzer = StockAnalyzer(symbol.upper())
 
@@ -272,7 +292,7 @@ def quick_quote(symbol):
             print(f"🎭 Returning mock quote for {symbol}")
             return jsonify(get_mock_quote(symbol))
 
-        # Use Alpha Vantage (with fallback to mock data if rate limited)
+        # Use Alpha Vantage (no fallback - show upgrade message if rate limited)
         if DATA_SOURCE == 'alpha_vantage':
             print(f"📊 Fetching real quote from Alpha Vantage for {symbol}")
             av.rate_limit()  # Respect rate limits
@@ -281,9 +301,16 @@ def quick_quote(symbol):
             if quote:
                 return jsonify(quote)
             else:
-                # Fallback to mock data if Alpha Vantage fails (rate limit, etc.)
-                print(f"⚠️ Alpha Vantage failed, falling back to mock data for {symbol}")
-                return jsonify(get_mock_quote(symbol))
+                # Return error message asking user to upgrade
+                print(f"⚠️ Alpha Vantage API limit exceeded for quick quote {symbol}")
+                return jsonify({
+                    'error': 'API_LIMIT_EXCEEDED',
+                    'message': 'Free tier API limit exceeded. Please upgrade to premium to continue accessing stock quotes.',
+                    'upgrade_info': {
+                        'title': 'Upgrade to Premium',
+                        'description': 'Get unlimited access to real-time stock quotes with our premium plan.'
+                    }
+                }), 429  # 429 Too Many Requests
 
         cache_key = f"quick_quote_{symbol.upper()}"
 
